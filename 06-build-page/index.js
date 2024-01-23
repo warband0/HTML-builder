@@ -57,80 +57,62 @@ async function createIndexHTML() {
       replaceComponent();
     });
   }
-  const readTemplate = await fsPromises.readFile(path.resolve(__dirname, './template.html'), 'utf-8');
+  const readTemplate = await fsPromises.readFile(
+    path.resolve(__dirname, './template.html'),
+    'utf-8',
+  );
   let HTMLdist = readTemplate;
-  const readComponent = await fsPromises.readdir(path.resolve(__dirname, './components'))
+  const readComponent = await fsPromises.readdir(
+    path.resolve(__dirname, './components'),
+  );
   componentsForEach(readComponent, HTMLdist);
 }
 
-async function runBuild() {
-  await createFolder(path.resolve(__dirname, './project-dist'));
+function copyAssets() {
+  const pathToOrig = path.resolve(__dirname, './assets');
+  const pathToCopy = path.resolve(__dirname, './project-dist/assets/');
+  createFolder(pathToCopy);
+
+  fs.readdir(pathToOrig, { withFileTypes: true }, (error, assets) => {
+    if (error) return error;
+    assets.forEach((asset) => {
+      if (asset.isDirectory()) {
+        createFolder(path.resolve(pathToCopy, asset.name));
+        copyDir(path.resolve(pathToOrig, asset.name), pathToCopy, asset.name);
+      }
+    });
+  });
+
+  function copyDir(pathToAsset, pathToCopy, assetName) {
+    let originalFiles;
+    fs.readdir(pathToAsset, (error, files) => {
+      if (error) return error;
+      files.forEach((file) => {
+        fsPromises.copyFile(
+          pathToAsset + `/${file}`,
+          `${pathToCopy}/${assetName}/${file}`,
+        );
+      });
+      originalFiles = files;
+      fs.readdir(`${pathToCopy}/${assetName}`, (error, files) => {
+        if (error) return error;
+        files.forEach((file) => {
+          if (!originalFiles.includes(file)) {
+            fs.unlink(`${pathToCopy}/${assetName}/${file}`, (err) => {
+              if (err) throw err;
+            });
+          }
+        });
+      });
+    });
+  }
+}
+
+function runBuild() {
+  createFolder(path.resolve(__dirname, './project-dist'));
   mergeStyle();
   createIndexHTML();
+  copyAssets();
 }
 
 runBuild();
-
-/* fs.access(path.resolve(__dirname, './project-dist'), (error) => {
-  if (error) {
-    fsPromises.mkdir(path.resolve(__dirname, './project-dist'));
-  }
-  // style
-
-  // assets
-  fs.readdir(path.resolve(__dirname, './assets'), (error, assets) => {
-    if (error) throw error;
-    fs.access(path.resolve(__dirname, './project-dist/assets'), (error) => {
-      if (error) {
-        fsPromises.mkdir(path.resolve(__dirname, './project-dist/assets'));
-      }
-      assets.forEach((asset) => {
-        fs.access(
-          path.resolve(__dirname, `./project-dist/assets/${asset}`),
-          (error) => {
-            if (error) {
-              fsPromises.mkdir(
-                path.resolve(__dirname, `./project-dist/assets/${asset}`),
-              );
-            }
-          },
-          fs.readdir(
-            path.resolve(__dirname, `./assets/${asset}`),
-            (error, files) => {
-              files.forEach((file) => {
-                fsPromises.copyFile(
-                  path.resolve(__dirname, `./assets/${asset}/${file}`),
-                  path.resolve(
-                    __dirname,
-                    `./project-dist/assets/${asset}/${file}`,
-                  ),
-                );
-              });
-              let originalFiles = files;
-              fs.readdir(
-                path.resolve(__dirname, `./project-dist/assets/${asset}`),
-                (error, copyfiles) => {
-                  copyfiles.forEach((element) => {
-                    if (!originalFiles.includes(element)) {
-                      fs.unlink(
-                        path.resolve(
-                          __dirname,
-                          `./project-dist/assets/${asset}/${element}`,
-                        ),
-                        (err) => {
-                          if (err) throw err;
-                        },
-                      );
-                    }
-                  });
-                },
-              );
-            },
-          ),
-        );
-      });
-    });
-  });
-  //html
-});
-*/
