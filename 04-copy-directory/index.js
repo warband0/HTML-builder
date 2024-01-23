@@ -13,11 +13,13 @@ function copyDir() {
   });
   let originalFiles;
   fs.readdir(pathToOrig, (error, files) => {
+    if (error) return error;
     files.forEach((file) => {
       fsPromises.copyFile(pathToOrig + `/${file}`, pathToCopy + `/${file}`);
     });
     originalFiles = files;
     fs.readdir(pathToCopy, (error, files) => {
+      if (error) return error;
       files.forEach((file) => {
         if (!originalFiles.includes(file)) {
           fs.unlink(pathToCopy + `/${file}`, (err) => {
